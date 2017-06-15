@@ -23,6 +23,7 @@ require 'chef/dsl/recipe'
 require 'chef/dsl/platform_introspection'
 require File.join(File.dirname(__FILE__), 'lvm')
 
+
 class Chef
   class Provider
     # The provider for lvm_logical_volume resource
@@ -97,28 +98,29 @@ class Chef
                          new_resource.mount_point
                        end
 
-          # Create the mount point
-          dir_resource = directory mount_spec[:location] do
-            mode '755'
-            owner 'root'
-            group 'root'
-            recursive true
-            action :nothing
-            not_if { Pathname.new(mount_spec[:location]).mountpoint? }
-          end
-          dir_resource.run_action(:create)
-          # Mark the resource as updated if the directory resource is updated
-          updates << dir_resource.updated?
+                       # Create the mount point
+                     dir_resource = directory "cleanup_#{mount_spec[:location]}" do
+                       path mount_spec[:location]
+                       mode '755'
+                       owner 'root'
+                       group 'root'
+                       recursive true
+                       action :nothing
+                       not_if { Pathname.new(mount_spec[:location]).mountpoint? }
+                     end
+                     dir_resource.run_action(:create)
+                     # Mark the resource as updated if the directory resource is updated
+                     updates << dir_resource.updated?
 
-          # Mount the logical volume
-          mount_resource = mount mount_spec[:location] do
-            options mount_spec[:options]
-            dump mount_spec[:dump]
-            pass mount_spec[:pass]
-            device device_name
-            fstype fs_type
-            action :nothing
-          end
+                     # Mount the logical volume
+                     mount_resource = mount "cleanup_#{mount_spec[:location]}" do
+                       mount_point mount_spec[:location]
+                       dump mount_spec[:dump]
+                       pass mount_spec[:pass]
+                       device device_name
+                       fstype fs_type
+                       action :nothing
+                     end
           mount_resource.run_action(:mount)
           mount_resource.run_action(:enable)
           # Mark the resource as updated if the mount resource is updated
